@@ -1,5 +1,13 @@
 #!/bin/bash
 
-myterm &
 # waybar &
+while pgrep -x mwd; do
+	myterm
+
+	pgrep -w mwd
+	if [ $? -ne 0 ]; then
+		exit 0
+	fi
+	sleep 1
+done
 
