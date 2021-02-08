@@ -274,6 +274,20 @@ static void kbdHandleKey(struct wl_listener *listener, void *data)
 			case WL_KEYBOARD_KEY_STATE_PRESSED:
 				for (int i = 0; i < nsyms; i++) {
 					switch (syms[i]) {
+						case XKB_KEY_XF86Switch_VT_1:
+						case XKB_KEY_XF86Switch_VT_2:
+						case XKB_KEY_XF86Switch_VT_3:
+						case XKB_KEY_XF86Switch_VT_4:
+						case XKB_KEY_XF86Switch_VT_5:
+						case XKB_KEY_XF86Switch_VT_6:
+						case XKB_KEY_XF86Switch_VT_7:
+						case XKB_KEY_XF86Switch_VT_8:
+						case XKB_KEY_XF86Switch_VT_9:
+						case XKB_KEY_XF86Switch_VT_10:
+						case XKB_KEY_XF86Switch_VT_11:
+						case XKB_KEY_XF86Switch_VT_12:
+							wlr_session_change_vt(wlr_backend_get_session(server->backend), syms[i] - XKB_KEY_XF86Switch_VT_1 + 1);
+							return;
 						case XKB_KEY_Escape:
 							wl_display_terminate(server->display);
 							return;
