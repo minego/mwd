@@ -26,7 +26,7 @@ protocols/wlr-layer-shell-unstable-v1-protocol.c: protocols/wlr-layer-shell-unst
 
 mwd: $(SOURCES) $(PROTOCOLS_H) $(PROTOCOLS_C)
 	$(CC) $(CFLAGS) -g -Werror -I. -I./protocols/ \
-		-O0 -ggdb3 \
+		-Wall -O0 -ggdb3 \
 		-DWLR_USE_UNSTABLE \
 		-o $@ $(SOURCES) \
 		$(LIBS)

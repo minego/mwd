@@ -9,7 +9,6 @@ static void XdgRequestResize(struct wl_listener *listener, void *data)
 {
 	struct wlr_xdg_toplevel_resize_event	*event	= data;
 	struct mwdView							*view	= wl_container_of(listener, view, requestResize);
-	struct mwdServer						*server	= view->server;
 
 	if (!ViewIsFocused(view)) {
 		/* Deny move/resize requests from unfocused clients. */

@@ -42,9 +42,6 @@ static void LayerEachSurface(mwdView *view, wlr_surface_iterator_func_t iterator
 
 static void LayerSetPos(mwdView *view, double top, double right, double bottom, double left)
 {
-	double			width;
-	double			height;
-
 	if (!LayerIsValid(view)) {
 		return;
 	}
@@ -56,9 +53,6 @@ static void LayerSetPos(mwdView *view, double top, double right, double bottom, 
 	) {
 		return;
 	}
-
-	width			= right - left;
-	height			= bottom - top;
 
 	view->top		= top;
 	view->right		= right;

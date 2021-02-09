@@ -26,7 +26,6 @@ static void constrainViewSize(mwdView *view, uint32_t edges, double *top, double
 	double	height	= *bottom - *top;
 	double	minWidth = 0, minHeight = 0;
 	double	maxWidth = 0, maxHeight = 0;
-	double	v;
 
 	/* Apply the constraints the view requested */
 	ViewGetConstraints(view, &minWidth, &maxWidth, &minHeight, &maxHeight);
@@ -300,6 +299,18 @@ static void kbdHandleKey(struct wl_listener *listener, void *data)
 							ViewFocus(ViewPrev(ViewFocused(server)), true);
 							return;
 
+						case XKB_KEY_a:
+							if (server->output.pendingTest) {
+								OutputTestApply(server->output.pendingTest);
+								server->output.pendingTest = NULL;
+							}
+							break;
+						case XKB_KEY_c:
+							if (server->output.pendingTest) {
+								OutputTestRevert(server->output.pendingTest);
+								server->output.pendingTest = NULL;
+							}
+							break;
 
 						default:
 							break;

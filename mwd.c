@@ -15,6 +15,8 @@ int main(int argc, char **argv)
 	int					c;
 	const char			*socket;
 
+	memset(&server, 0, sizeof(server));
+
 	// TODO Let the user call this again to change the verbosity
 	wlr_log_init(WLR_DEBUG, NULL);
 
@@ -53,6 +55,10 @@ int main(int argc, char **argv)
 
 	server.layout = wlr_output_layout_create();
 
+	server.layoutChanged.notify = OutputLayoutChanged;
+	wl_signal_add(&server.layout->events.change, &server.layoutChanged);
+	server.output.applying = false;
+
 	/*
 		Setup our list of views and shells:
 			https://drewdevault.com/2018/07/29/Wayland-shells.html
@@ -75,7 +81,12 @@ int main(int argc, char **argv)
 	*/
 	LayerMain(&server);
 
-	/* Setup the xdg output manager */
+	/*
+		Setup the xdg output manager
+
+		This will automatically send extra information about connected outputs
+		to clients.
+	*/
     wlr_xdg_output_manager_v1_create(server.display, server.layout);
 
 	/* Register for notifications when there is a new output */
@@ -83,7 +94,13 @@ int main(int argc, char **argv)
 	server.output.added.notify = OutputAdd;
 	wl_signal_add(&server.backend->events.new_output, &server.output.added);
 
-	/* The output manager allows changing output options (resolution, etc) */
+	/*
+		Setup the wlr output manager
+
+		This implements the wlr-output-management protocol, which allows clients
+		to configure and test output display options (ie resolution, refresh
+		rate, scale, etc)
+	*/
 	server.output.mgr = wlr_output_manager_v1_create(server.display);
 
 	server.output.apply.notify = OutputApplyCfg;

@@ -179,9 +179,6 @@ mwdView *ViewFindByPos(mwdServer *server, double x, double y, struct wlr_surface
 		This relies on server->views being top to bottom.
 	*/
 	mwdView					*view;
-	struct wlr_surface		*surface;
-	bool					found	= false;
-	uint32_t				top, right, bottom, left;
 
 	if (psurface) {
 		*psurface = NULL;
@@ -256,10 +253,10 @@ bool ViewGetConstraints(mwdView *view, double *minWidth, double *maxWidth, doubl
 	return result;
 }
 
-bool ViewSetPos(mwdView *view, double top, double right, double bottom, double left)
+void ViewSetPos(mwdView *view, double top, double right, double bottom, double left)
 {
 	if (!view || !view->cb || !view->cb->set.pos) {
-		return NULL;
+		return;
 	}
 
 	view->cb->set.pos(view, top, right, bottom, left);
@@ -269,6 +266,8 @@ static void map(struct wl_listener *listener, void *data)
 {
 	struct mwdView *view = wl_container_of(listener, view, map);
 	view->mapped = true;
+
+	// TODO Don't always focus a new view! Don't allow stealing focus!
 	ViewFocus(view, true);
 }
 
@@ -327,7 +326,6 @@ static void destroy(struct wl_listener *listener, void *data)
 static void requestMove(struct wl_listener *listener, void *data)
 {
 	struct mwdView		*view	= wl_container_of(listener, view, requestMove);
-	struct mwdServer	*server	= view->server;
 
 	if (!ViewIsFocused(view)) {
 		/* Deny move/resize requests from unfocused clients. */

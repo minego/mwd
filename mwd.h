@@ -61,6 +61,7 @@ typedef struct mwdServer
 	struct wlr_renderer					*renderer;
 	struct wlr_seat						*seat;
 	struct wlr_output_layout			*layout;
+	struct wl_listener					layoutChanged;
 
 	struct wlr_cursor					*cursor;
 	struct wlr_xcursor_manager			*cursorMgr;
@@ -87,6 +88,9 @@ typedef struct mwdServer
 		struct wl_listener				added;
 		struct wl_listener				apply;
 		struct wl_listener				test;
+
+		struct mwdOutputTest			*pendingTest;
+		bool							applying;
 	} output;
 
 	struct wl_listener					cursorMotionRelative;
@@ -116,33 +120,42 @@ typedef struct mwdServer
 
 typedef struct mwdOutput
 {
-	struct wl_list					link;
-	mwdServer						*server;
+	struct wl_list						link;
+	mwdServer							*server;
 
-	struct wlr_output				*output;
-	struct wl_listener				frame;
-	bool							enabled;
+	struct wlr_output					*output;
+	struct wl_listener					frame;
+	bool								enabled;
 } mwdOutput;
+
+typedef struct mwdOutputTest
+{
+	mwdServer							*server;
+	struct wl_event_source				*timer;
+
+	struct wlr_output_configuration_v1	*oldConfig;
+	struct wlr_output_configuration_v1	*newConfig;
+} mwdOutputTest;
 
 typedef struct mwdView
 {
 	struct {
-		struct wl_list				drawOrder;
-		struct wl_list				userOrder;
+		struct wl_list					drawOrder;
+		struct wl_list					userOrder;
 	} link;
 
-	mwdServer						*server;
+	mwdServer							*server;
 	enum {
 		MWD_UNKNOWN,
 		MWD_XDG_SHELL,
 		MWD_LAYER_SHELL
 	} type;
-	struct mwdViewInterface			*cb;
+	struct mwdViewInterface				*cb;
 
 	union {
 		struct {
-			struct wlr_xdg_surface	*surface;
-			bool					activated;
+			struct wlr_xdg_surface		*surface;
+			bool						activated;
 		} xdg;
 
 		struct {
@@ -150,27 +163,27 @@ typedef struct mwdView
 		} layer;
 	};
 
-	struct wl_listener				map;
-	struct wl_listener				unmap;
-	struct wl_listener				destroy;
-	struct wl_listener				requestMove;
-	struct wl_listener				requestResize;
-	bool							mapped;
+	struct wl_listener					map;
+	struct wl_listener					unmap;
+	struct wl_listener					destroy;
+	struct wl_listener					requestMove;
+	struct wl_listener					requestResize;
+	bool								mapped;
 
-	uint32_t						edges;
-	double							top, right, bottom, left;
-	mwdLayer						renderLayer;
+	uint32_t							edges;
+	double								top, right, bottom, left;
+	mwdLayer							renderLayer;
 } mwdView;
 
 typedef struct mwdKeyboard
 {
-	struct wl_list					link;
-	mwdServer						*server;
+	struct wl_list						link;
+	mwdServer							*server;
 
-	struct wlr_input_device			*device;
+	struct wlr_input_device				*device;
 
-	struct wl_listener				modifiers;
-	struct wl_listener				key;
+	struct wl_listener					modifiers;
+	struct wl_listener					key;
 } mwdKeyboard;
 
 typedef struct mwdViewInterface
@@ -203,8 +216,11 @@ typedef struct mwdViewInterface
 /* output.c */
 void OutputAdd(struct wl_listener *listener, void *data);
 void OutputApplyCfg(struct wl_listener *listener, void *data);
+void OutputLayoutChanged(struct wl_listener *listener, void *data);
 void OutputTestCfg(struct wl_listener *listener, void *data);
 mwdOutput *OutputFind(mwdServer *server, struct wlr_output *output);
+void OutputTestApply(struct mwdOutputTest *test);
+void OutputTestRevert(struct mwdOutputTest *test);
 
 /* input.c */
 void inputMain(mwdServer *server);
@@ -225,7 +241,7 @@ mwdView *ViewFindByPos(mwdServer *server, double x, double y, struct wlr_surface
 mwdView *ViewFindBySurface(mwdServer *server, struct wlr_surface *surface);
 void ViewSetActivated(mwdView *view, bool activated);
 bool ViewGetConstraints(mwdView *view, double *minWidth, double *maxWidth, double *minHeight, double *maxHeight);
-bool ViewSetPos(mwdView *view, double top, double right, double bottom, double left);
+void ViewSetPos(mwdView *view, double top, double right, double bottom, double left);
 void ViewGetPos(mwdView *view, double *top, double *right, double *bottom, double *left);
 void ViewGetSize(mwdView *view, double *width, double *height);
 
