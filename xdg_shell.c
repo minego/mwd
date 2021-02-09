@@ -131,19 +131,19 @@ void XdgGetPos(mwdView *view, double *ptop, double *pright, double *pbottom, dou
     wlr_xdg_surface_get_geometry(view->xdg.surface, &box);
 
 	if (view->edges & WLR_EDGE_TOP) {
-		top = view->top + box.y;
-		bottom = top + box.height;
+		top		= view->top + box.y;
+		bottom	= top + box.height;
 	} else {
-		bottom = view->bottom + box.y;
-		top = bottom - box.height;
+		bottom	= view->bottom + box.y;
+		top		= bottom - box.height;
 	}
 
 	if (view->edges & WLR_EDGE_LEFT) {
-		left = view->left + box.x;
-		right = left + box.width;
+		left	= view->left + box.x;
+		right	= left + box.width;
 	} else {
-		right = view->right + box.x;
-		left = right - box.width;
+		right	= view->right + box.x;
+		left	= right - box.width;
 	}
 
 	if (ptop) {
@@ -210,6 +210,26 @@ static void XdgEachSurface(mwdView *view, wlr_surface_iterator_func_t iterator, 
 	wlr_xdg_surface_for_each_surface(view->xdg.surface, iterator, user_data);
 }
 
+static void XdgRenderView(mwdView *view, struct wlr_renderer *renderer, mwdOutput *output)
+{
+	mwdRenderData			rdata;
+
+	if (!XdgIsValid(view)) {
+		return;
+	}
+
+	memset(&rdata, 0, sizeof(rdata));
+
+	rdata.output		= output->output;
+	rdata.renderer		= renderer;
+	rdata.view			= view;
+
+	clock_gettime(CLOCK_MONOTONIC, &rdata.when);
+
+    wlr_surface_for_each_surface(view->xdg.surface->surface, RenderSurface, &rdata);
+    wlr_xdg_surface_for_each_popup(view->xdg.surface, RenderPopupSurface, &rdata);
+}
+
 struct mwdViewInterface XdgShellViewInterface = {
 	.set = {
 		.pos			= &XdgSetPos,
@@ -223,8 +243,6 @@ struct mwdViewInterface XdgShellViewInterface = {
 		.activated		= &XdgGetActivated,
 	},
 
-	.destroy			= &XdgDestroyView,
-
 	.is = {
 		.valid			= &XdgIsValid,
 		.at				= &XdgIsAt,
@@ -233,7 +251,10 @@ struct mwdViewInterface XdgShellViewInterface = {
 
 	.foreach = {
 		.surface		= &XdgEachSurface
-	}
+	},
+
+	.destroy			= &XdgDestroyView,
+	.render				= &XdgRenderView
 };
 
 /*
@@ -242,7 +263,7 @@ struct mwdViewInterface XdgShellViewInterface = {
 */
 static void XdgNewSurface(struct wl_listener *listener, void *data)
 {
-	mwdServer				*server			= wl_container_of(listener, server, newSurface.xdg);
+	mwdServer				*server			= wl_container_of(listener, server, xdgShell.newSurface);
 	mwdView					*view;
 	struct wlr_xdg_surface	*surface		= data;
 
@@ -276,9 +297,9 @@ static void XdgNewSurface(struct wl_listener *listener, void *data)
 
 void XdgMain(mwdServer *server)
 {
-	server->shell.xdg = wlr_xdg_shell_create(server->display);
+	server->xdgShell.shell = wlr_xdg_shell_create(server->display);
 
-	server->newSurface.xdg.notify = XdgNewSurface;
-	wl_signal_add(&server->shell.xdg->events.new_surface, &server->newSurface.xdg);
+	server->xdgShell.newSurface.notify = XdgNewSurface;
+	wl_signal_add(&server->xdgShell.shell->events.new_surface, &server->xdgShell.newSurface);
 }
 

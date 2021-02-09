@@ -20,7 +20,24 @@ void ViewForEachSurface(mwdView *view, wlr_surface_iterator_func_t iterator, voi
 
 void ViewGetPos(mwdView *view, double *top, double *right, double *bottom, double *left)
 {
-	if (!view || !view->cb || !view->cb->get.pos) {
+	if (!view) {
+		return;
+	}
+
+	if (top) {
+		*top	= view->top;
+	}
+	if (right) {
+		*right	= view->right;
+	}
+	if (bottom) {
+		*bottom	= view->bottom;
+	}
+	if (left) {
+		*left	= view->left;
+	}
+
+	if (!view->cb || !view->cb->get.pos) {
 		return;
 	}
 
@@ -333,6 +350,41 @@ static void requestMove(struct wl_listener *listener, void *data)
 	}
 
 	ViewGrab(view, MWD_GRAB_MOVE, view->edges);
+}
+
+void RenderView(mwdView *view, struct wlr_renderer *renderer, mwdOutput *output)
+{
+	struct wlr_surface	*surface;
+	mwdRenderData		rdata;
+
+	if (!ViewIsValid(view)) {
+		return;
+	}
+
+	if (!view->mapped) {
+		return;
+	}
+
+	if (!view || !view->cb) {
+		return;
+	}
+
+	if (view->cb->render) {
+		view->cb->render(view, renderer, output);
+	} else if (view->cb->get.surface && (surface = view->cb->get.surface(view))) {
+		/*
+			Default view render call for any shell that doesn't implement their
+			own version.
+		*/
+		memset(&rdata, 0, sizeof(rdata));
+
+		rdata.output		= output->output;
+		rdata.renderer		= renderer;
+		rdata.view			= view;
+
+		clock_gettime(CLOCK_MONOTONIC, &rdata.when);
+		wlr_surface_for_each_surface(surface, RenderSurface, &rdata);
+	}
 }
 
 mwdView *CreateNewView(mwdServer *server)

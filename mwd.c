@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	server.renderer = wlr_backend_get_renderer(server.backend);
 	wlr_renderer_init_wl_display(server.renderer, server.display);
 
-	wlr_compositor_create(server.display, server.renderer);
+	server.compositor = wlr_compositor_create(server.display, server.renderer);
 	wlr_data_device_manager_create(server.display);
 
 	server.layout = wlr_output_layout_create();
@@ -118,25 +118,9 @@ int main(int argc, char **argv)
 	// TODO screencopy_manager
 	// TODO all the other managers
 
-#if 0
-	// TODO Create the wlr_xwayland shell
-	server.xwayland.wlr_xwayland = wlr_xwayland_create(server->display, server->compositor, TRUE);
-	if (!server->xwayland.wlr_xwayland) {
-		sway_log(SWAY_ERROR, "Failed to start Xwayland");
-		unsetenv("DISPLAY");
-	} else {
-		server->xwayland_surface.notify = handle_xwayland_surface;
-		wl_signal_add(&server->xwayland.wlr_xwayland->events.new_surface, &server->xwayland_surface);
 
-		server->xwayland_ready.notify = handle_xwayland_ready;
-		wl_signal_add(&server->xwayland.wlr_xwayland->events.ready, &server->xwayland_ready);
-
-		setenv("DISPLAY", server->xwayland.wlr_xwayland->display_name, true);
-	}
-#else
-	unsetenv("DISPLAY");
-#endif
-
+	/* Create the XWayland shell */
+	XWaylandMain(&server);
 	inputMain(&server);
 
 	server.setSelection.notify = setSelection;

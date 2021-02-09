@@ -204,6 +204,25 @@ static bool LayerIsAt(mwdView *view, double x, double y, struct wlr_surface **ps
 	return TRUE;
 }
 
+static void LayerRenderView(mwdView *view, struct wlr_renderer *renderer, mwdOutput *output)
+{
+	mwdRenderData			rdata;
+
+	if (!LayerIsValid(view)) {
+		return;
+	}
+
+	memset(&rdata, 0, sizeof(rdata));
+	rdata.output		= output->output;
+	rdata.renderer		= renderer;
+	rdata.view			= view;
+
+	clock_gettime(CLOCK_MONOTONIC, &rdata.when);
+
+    wlr_layer_surface_v1_for_each_surface(view->layer.surface,	RenderSurface, &rdata);
+    wlr_layer_surface_v1_for_each_popup(view->layer.surface,	RenderSurface, &rdata);
+}
+
 mwdViewInterface LayerShellViewInterface = {
 	.set = {
 		.pos			= &LayerSetPos,
@@ -216,8 +235,6 @@ mwdViewInterface LayerShellViewInterface = {
 		.constraints	= NULL,
 	},
 
-	.destroy			= &LayerDestroyView,
-
 	.is = {
 		.valid			= &LayerIsValid,
 		.visible		= &LayerIsVisible,
@@ -226,13 +243,16 @@ mwdViewInterface LayerShellViewInterface = {
 
 	.foreach = {
 		.surface		= &LayerEachSurface
-	}
+	},
+
+	.destroy			= &LayerDestroyView,
+	.render				= &LayerRenderView
 };
 
 /* Received a new layer surface from a client.  */
 static void LayerNewSurface(struct wl_listener *listener, void *data)
 {
-	mwdServer						*server			= wl_container_of(listener, server, newSurface.layer);
+	mwdServer						*server			= wl_container_of(listener, server, layerShell.newSurface);
 	struct wlr_layer_surface_v1		*surface		= data;
 	mwdView							*view;
 	mwdOutput						*output;
@@ -262,10 +282,10 @@ static void LayerNewSurface(struct wl_listener *listener, void *data)
 
 void LayerMain(mwdServer *server)
 {
-	server->shell.layer = wlr_layer_shell_v1_create(server->display);
+	server->layerShell.shell = wlr_layer_shell_v1_create(server->display);
 
-	server->newSurface.layer.notify = LayerNewSurface;
-	wl_signal_add(&server->shell.layer->events.new_surface, &server->newSurface.layer);
+	server->layerShell.newSurface.notify = LayerNewSurface;
+	wl_signal_add(&server->layerShell.shell->events.new_surface, &server->layerShell.newSurface);
 }
 
 

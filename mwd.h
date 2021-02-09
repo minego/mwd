@@ -28,6 +28,8 @@
 #include <xkbcommon/xkbcommon.h>
 #include <linux/input-event-codes.h>
 
+#include <wlr/xwayland.h>
+
 #ifndef TRUE
 # define TRUE 1
 #endif
@@ -59,6 +61,7 @@ typedef struct mwdServer
 	struct wl_display					*display;
 	struct wlr_backend					*backend;
 	struct wlr_renderer					*renderer;
+	struct wlr_compositor				*compositor;
 	struct wlr_seat						*seat;
 	struct wlr_output_layout			*layout;
 	struct wl_listener					layoutChanged;
@@ -72,16 +75,6 @@ typedef struct mwdServer
 	} views;
 	struct wl_list						keyboards;
 	struct wl_list						outputs;
-
-	struct {
-		struct wlr_xdg_shell			*xdg;
-		struct wlr_layer_shell_v1		*layer;
-	} shell;
-
-	struct {
-		struct wl_listener				xdg;
-		struct wl_listener				layer;
-	} newSurface;
 
 	struct {
 		struct wlr_output_manager_v1	*mgr;
@@ -116,6 +109,22 @@ typedef struct mwdServer
 
 		mwdGrabMode						mode;
 	} grab;
+
+	struct {
+		struct wlr_layer_shell_v1		*shell;
+		struct wl_listener				newSurface;
+	} layerShell;
+
+	struct {
+		struct wlr_xdg_shell			*shell;
+		struct wl_listener				newSurface;
+	} xdgShell;
+
+	struct {
+		struct wlr_xwayland				*shell;
+		struct wl_listener				ready;
+		struct wl_listener				newSurface;
+	} xwayland;
 } mwdServer;
 
 typedef struct mwdOutput
@@ -148,7 +157,8 @@ typedef struct mwdView
 	enum {
 		MWD_UNKNOWN,
 		MWD_XDG_SHELL,
-		MWD_LAYER_SHELL
+		MWD_LAYER_SHELL,
+		MWD_XWAYLAND_SHELL
 	} type;
 	struct mwdViewInterface				*cb;
 
@@ -161,6 +171,11 @@ typedef struct mwdView
 		struct {
 			struct wlr_layer_surface_v1	*surface;
 		} layer;
+
+		struct {
+			struct wlr_xwayland_surface	*surface;
+			bool						activated;
+		} xwayland;
 	};
 
 	struct wl_listener					map;
@@ -174,6 +189,16 @@ typedef struct mwdView
 	double								top, right, bottom, left;
 	mwdLayer							renderLayer;
 } mwdView;
+
+typedef struct mwdRenderData
+{
+	struct wlr_output		*output;
+	struct wlr_renderer		*renderer;
+	struct timespec			when;
+	mwdView					*view;
+
+	int						sx, sy;
+} mwdRenderData;
 
 typedef struct mwdKeyboard
 {
@@ -200,8 +225,6 @@ typedef struct mwdViewInterface
 		bool				(*activated		)(mwdView *view);
 	} get;
 
-    void					(*destroy		)(mwdView *view);
-
 	struct {
 		bool				(*valid			)(mwdView *view);
 		bool				(*at			)(mwdView *view, double x, double y, struct wlr_surface **surface, double *offsetX, double *offsetY);
@@ -211,6 +234,9 @@ typedef struct mwdViewInterface
 	struct {
 		void				(*surface		)(mwdView *view, wlr_surface_iterator_func_t iterator, void *user_data);
 	} foreach;
+
+    void					(*destroy		)(mwdView *view);
+    void					(*render		)(mwdView *view, struct wlr_renderer *renderer, mwdOutput *output);
 } mwdViewInterface;
 
 /* output.c */
@@ -222,10 +248,16 @@ mwdOutput *OutputFind(mwdServer *server, struct wlr_output *output);
 void OutputTestApply(struct mwdOutputTest *test);
 void OutputTestRevert(struct mwdOutputTest *test);
 
+/* render.c */
+void RenderFrame(struct wl_listener *listener, void *data);
+void RenderSurface(struct wlr_surface *surface, int sx, int sy, void *data);
+void RenderPopupSurface(struct wlr_surface *surface, int sx, int sy, void *data);
+
 /* input.c */
 void inputMain(mwdServer *server);
 
 /* view.c */
+void RenderView(mwdView *view, struct wlr_renderer *renderer, mwdOutput *output);
 mwdView *CreateNewView(mwdServer *server);
 bool ViewIsValid(mwdView *view);
 bool ViewIsVisible(mwdView *view, mwdOutput *output);
@@ -250,6 +282,7 @@ void ViewForEachSurface(mwdView *view, wlr_surface_iterator_func_t iterator, voi
 /* shell_*.c */
 void XdgMain(mwdServer *server);
 void LayerMain(mwdServer *server);
+void XWaylandMain(mwdServer *server);
 
 #endif // _MWD_H
 
