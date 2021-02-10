@@ -117,6 +117,15 @@ void ViewFocus(mwdView *view, bool raise)
 		ViewSetActivated(view, true);
 		wlr_seat_keyboard_notify_enter(seat, surface, keyboard->keycodes, keyboard->num_keycodes, &keyboard->modifiers);
 	}
+
+#if 1
+	{
+		double						top, right, bottom, left;
+
+		ViewGetPos(view, &top, &right, &bottom, &left);
+		wlr_log(WLR_DEBUG, "Focused window at %fx%f %fx%f\n", top, left, bottom, right);
+	}
+#endif
 }
 
 mwdView *ViewFocused(mwdServer *server)

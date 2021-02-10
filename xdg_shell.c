@@ -67,33 +67,6 @@ static bool XdgIsVisible(mwdView *view, mwdOutput *output)
 	return true;
 }
 
-static bool XdgIsAt(mwdView *view, double x, double y, struct wlr_surface **psurface, double *offsetX, double *offsetY)
-{
-	struct wlr_surface		*surface;
-	double					offX, offY;
-
-	if (!XdgIsValid(view)) {
-		return false;
-	}
-
-	/* This expects and returns surface local coordinates */
-	if (!(surface = wlr_xdg_surface_surface_at(view->xdg.surface, x - view->left, y - view->top, &offX, &offY))) {
-		return false;
-	}
-
-	if (offsetX) {
-		*offsetX = offX;
-	}
-	if (offsetY) {
-		*offsetY = offY;
-	}
-
-	if (psurface) {
-		*psurface = surface;
-	}
-	return TRUE;
-}
-
 static void XdgSetPos(mwdView *view, double top, double right, double bottom, double left)
 {
     struct wlr_box	box;
@@ -107,43 +80,50 @@ static void XdgSetPos(mwdView *view, double top, double right, double bottom, do
 	width			= right - left;
 	height			= bottom - top;
 
+	view->top		= top;
+	view->right		= right;
+	view->bottom	= bottom;
+	view->left		= left;
+
     wlr_xdg_surface_get_geometry(view->xdg.surface, &box);
 
-	view->top		= top		- box.y;
-	view->right		= right		- box.x;
-	view->bottom	= bottom	- box.y;
-	view->left		= left		- box.x;
-
-	if (box.height != height || box.width != width) {
-		wlr_xdg_toplevel_set_size(view->xdg.surface, width, height);
+	if (height != view->xdg.surface->surface->current.height ||
+		width != view->xdg.surface->surface->current.width
+	) {
+// TODO FIXME The x and y in the geometry represent a border area that gnome
+//		uses for shadows. The size needs to be set to the actual window size and
+//		shouldn't include those.
+//
+//		We should not be using that here though. Our position and size should be
+//		the actual window size, not the surface size.
+//
+//		This code works right, but just by chance.
+		wlr_xdg_toplevel_set_size(view->xdg.surface, width - (box.x * 2), height - (box.y * 2));
 	}
 }
 
 void XdgGetPos(mwdView *view, double *ptop, double *pright, double *pbottom, double *pleft)
 {
-	struct wlr_box		box;
 	double				top, right, bottom, left;
 
 	if (!XdgIsValid(view)) {
 		return;
 	}
 
-    wlr_xdg_surface_get_geometry(view->xdg.surface, &box);
-
 	if (view->edges & WLR_EDGE_TOP) {
-		top		= view->top + box.y;
-		bottom	= top + box.height;
+		top		= view->top;
+		bottom	= top + view->xdg.surface->surface->current.height;
 	} else {
-		bottom	= view->bottom + box.y;
-		top		= bottom - box.height;
+		bottom	= view->bottom;
+		top		= bottom - view->xdg.surface->surface->current.height;
 	}
 
 	if (view->edges & WLR_EDGE_LEFT) {
-		left	= view->left + box.x;
-		right	= left + box.width;
+		left	= view->left;
+		right	= left + view->xdg.surface->surface->current.width;
 	} else {
-		right	= view->right + box.x;
-		left	= right - box.width;
+		right	= view->right;
+		left	= right - view->xdg.surface->surface->current.width;
 	}
 
 	if (ptop) {
@@ -158,6 +138,36 @@ void XdgGetPos(mwdView *view, double *ptop, double *pright, double *pbottom, dou
 	if (pleft) {
 		*pleft		= left;
 	}
+}
+
+static bool XdgIsAt(mwdView *view, double x, double y, struct wlr_surface **psurface, double *offsetX, double *offsetY)
+{
+	struct wlr_surface		*surface;
+	double					offX, offY;
+	double					top, right, bottom, left;
+
+	if (!XdgIsValid(view)) {
+		return false;
+	}
+
+	XdgGetPos(view, &top, &right, &bottom, &left);
+
+	/* This expects and returns surface local coordinates */
+	if (!(surface = wlr_xdg_surface_surface_at(view->xdg.surface, x - left, y - top, &offX, &offY))) {
+		return false;
+	}
+
+	if (offsetX) {
+		*offsetX = offX;
+	}
+	if (offsetY) {
+		*offsetY = offY;
+	}
+
+	if (psurface) {
+		*psurface = surface;
+	}
+	return TRUE;
 }
 
 static void XdgSetActivated(mwdView *view, bool activated)
@@ -226,7 +236,7 @@ static void XdgRenderView(mwdView *view, struct wlr_renderer *renderer, mwdOutpu
 
 	clock_gettime(CLOCK_MONOTONIC, &rdata.when);
 
-    wlr_surface_for_each_surface(view->xdg.surface->surface, RenderSurface, &rdata);
+    wlr_xdg_surface_for_each_surface(view->xdg.surface, RenderSurface, &rdata);
     wlr_xdg_surface_for_each_popup(view->xdg.surface, RenderPopupSurface, &rdata);
 }
 

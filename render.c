@@ -69,6 +69,7 @@ void RenderSurface(struct wlr_surface *surface, int sx, int sy, void *data)
 	double						oy		= 0;
 	double						width, height;
 	float						matrix[9];
+	uint32_t					edges;
 	enum wl_output_transform	transform;
 
 	if (!(texture = wlr_surface_get_texture(surface))) {
@@ -78,24 +79,28 @@ void RenderSurface(struct wlr_surface *surface, int sx, int sy, void *data)
 	ViewGetPos(view, &top, &right, &bottom, &left);
 
 	if (surface == ViewGetSurface(view)) {
-		ViewGetSize(view, &width, &height);
+		width = right - left;
+		height = bottom - top;
+		edges = view->edges;
 	} else {
 		width = surface->current.width;
 		height = surface->current.height;
+
+		edges = WLR_EDGE_TOP | WLR_EDGE_LEFT;
 	}
 
 	/* Calculate the coordinates for this view relative to the output */
 	wlr_output_layout_output_coords(view->server->layout, output, &ox, &oy);
 
 	box.height	= height;
-	if (view->edges & WLR_EDGE_TOP) {
+	if (edges & WLR_EDGE_TOP) {
 		box.y	= top + oy;
 	} else {
 		box.y	= bottom + oy - height;
 	}
 
 	box.width	= width;
-	if (view->edges & WLR_EDGE_LEFT) {
+	if (edges & WLR_EDGE_LEFT) {
 		box.x	= left + ox;
 	} else {
 		box.x	= right + ox - width;
@@ -132,59 +137,6 @@ void RenderPopupSurface(struct wlr_surface *surface, int sx, int sy, void *data)
 
     wlr_surface_for_each_surface(surface, RenderSurface, rdata);
 }
-
-#if 0
-static void renderFrame(struct wl_listener *listener, void *data)
-{
-	mwdOutput				*output		= wl_container_of(listener, output, frame);
-	struct wlr_renderer		*renderer	= output->server->renderer;
-	mwdView					*view;
-	struct timespec			now;
-	int						width, height;
-	float					color[4]	= {0.3, 0.3, 0.3, 1.0};
-	struct renderData		rdata;
-	mwdLayer				layer;
-
-	clock_gettime(CLOCK_MONOTONIC, &now);
-
-	/* wlr_output_attach_render makes the OpenGL context current. */
-	if (!wlr_output_attach_render(output->output, NULL)) {
-		return;
-	}
-
-	wlr_output_effective_resolution(output->output, &width, &height);
-
-	/* Begin the renderer (calls glViewport and some other GL sanity checks) */
-	wlr_renderer_begin(renderer, width, height);
-
-	// TODO Let a user configure this color
-	wlr_renderer_clear(renderer, color);
-
-	for (layer = MWD_LAYER_BEFORE + 1; layer < MWD_LAYER_AFTER; layer++) {
-		wl_list_for_each_reverse(view, &output->server->views.drawOrder, link.drawOrder) {
-			if (view->renderLayer != layer) {
-				continue;
-			}
-
-			if (!ViewIsVisible(view, output)) {
-				continue;
-			}
-			rdata.output	= output->output;
-			rdata.view		= view;
-			rdata.renderer	= renderer;
-			rdata.when		= &now;
-
-			ViewForEachSurface(view, renderSurface, &rdata);
-		}
-	}
-
-	wlr_output_render_software_cursors(output->output, NULL);
-
-	/* Conclude rendering, swap the buffers, show the final frame on screen */
-	wlr_renderer_end(renderer);
-	wlr_output_commit(output->output);
-}
-#endif
 
 void RenderFrame(struct wl_listener *listener, void *data)
 {
