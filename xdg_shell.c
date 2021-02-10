@@ -69,9 +69,9 @@ static bool XdgIsVisible(mwdView *view, mwdOutput *output)
 
 static void XdgSetPos(mwdView *view, double top, double right, double bottom, double left)
 {
-    struct wlr_box	box;
-	double			width;
-	double			height;
+    struct wlr_box		box;
+	double				width;
+	double				height;
 
 	if (!XdgIsValid(view)) {
 		return;
@@ -87,44 +87,60 @@ static void XdgSetPos(mwdView *view, double top, double right, double bottom, do
 
     wlr_xdg_surface_get_geometry(view->xdg.surface, &box);
 
-	if (height != view->xdg.surface->surface->current.height ||
-		width != view->xdg.surface->surface->current.width
-	) {
-// TODO FIXME The x and y in the geometry represent a border area that gnome
-//		uses for shadows. The size needs to be set to the actual window size and
-//		shouldn't include those.
-//
-//		We should not be using that here though. Our position and size should be
-//		the actual window size, not the surface size.
-//
-//		This code works right, but just by chance.
-		wlr_xdg_toplevel_set_size(view->xdg.surface, width - (box.x * 2), height - (box.y * 2));
+	if (height != box.height || width != box.width) {
+		wlr_xdg_toplevel_set_size(view->xdg.surface, width, height);
 	}
 }
 
 void XdgGetPos(mwdView *view, double *ptop, double *pright, double *pbottom, double *pleft)
 {
+    struct wlr_box		box;
 	double				top, right, bottom, left;
 
 	if (!XdgIsValid(view)) {
 		return;
 	}
 
+    wlr_xdg_surface_get_geometry(view->xdg.surface, &box);
+
 	if (view->edges & WLR_EDGE_TOP) {
 		top		= view->top;
-		bottom	= top + view->xdg.surface->surface->current.height;
+		bottom	= top + box.height;
 	} else {
 		bottom	= view->bottom;
-		top		= bottom - view->xdg.surface->surface->current.height;
+		top		= bottom - box.height;
 	}
 
 	if (view->edges & WLR_EDGE_LEFT) {
 		left	= view->left;
-		right	= left + view->xdg.surface->surface->current.width;
+		right	= left + box.width;
 	} else {
 		right	= view->right;
-		left	= right - view->xdg.surface->surface->current.width;
+		left	= right - box.width;
 	}
+
+	if (ptop) {
+		*ptop		= top;
+	}
+	if (pright) {
+		*pright		= right;
+	}
+	if (pbottom) {
+		*pbottom	= bottom;
+	}
+	if (pleft) {
+		*pleft		= left;
+	}
+}
+
+void XdgGetRenderPos(mwdView *view, double *ptop, double *pright, double *pbottom, double *pleft)
+{
+	double				top, right, bottom, left;
+
+	XdgGetPos(view, &top, &right, &bottom, &left);
+
+	right	= left + view->xdg.surface->surface->current.width;
+	bottom	= top  + view->xdg.surface->surface->current.height;
 
 	if (ptop) {
 		*ptop		= top;
@@ -250,6 +266,7 @@ struct mwdViewInterface XdgShellViewInterface = {
 		.surface		= &XdgGetSurface,
 		.constraints	= &XdgGetConstraints,
 		.pos			= &XdgGetPos,
+		.renderPos		= &XdgGetRenderPos,
 		.activated		= &XdgGetActivated,
 	},
 

@@ -69,42 +69,29 @@ void RenderSurface(struct wlr_surface *surface, int sx, int sy, void *data)
 	double						oy		= 0;
 	double						width, height;
 	float						matrix[9];
-	uint32_t					edges;
 	enum wl_output_transform	transform;
 
 	if (!(texture = wlr_surface_get_texture(surface))) {
 		return;
 	}
 
-	ViewGetPos(view, &top, &right, &bottom, &left);
+	ViewGetRenderPos(view, &top, &right, &bottom, &left);
 
 	if (surface == ViewGetSurface(view)) {
 		width = right - left;
 		height = bottom - top;
-		edges = view->edges;
 	} else {
 		width = surface->current.width;
 		height = surface->current.height;
-
-		edges = WLR_EDGE_TOP | WLR_EDGE_LEFT;
 	}
 
 	/* Calculate the coordinates for this view relative to the output */
 	wlr_output_layout_output_coords(view->server->layout, output, &ox, &oy);
 
 	box.height	= height;
-	if (edges & WLR_EDGE_TOP) {
-		box.y	= top + oy;
-	} else {
-		box.y	= bottom + oy - height;
-	}
-
 	box.width	= width;
-	if (edges & WLR_EDGE_LEFT) {
-		box.x	= left + ox;
-	} else {
-		box.x	= right + ox - width;
-	}
+	box.y		= top + oy;
+	box.x		= left + ox;
 
 	box.x += (rdata->sx + sx);
 	box.y += (rdata->sy + sy);

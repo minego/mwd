@@ -222,6 +222,7 @@ typedef struct mwdViewInterface
 		struct wlr_surface	*(*surface		)(mwdView *view);
 		bool				(*constraints	)(mwdView *view, double *minWidth, double *maxWidth, double *minHeight, double *maxHeight);
 		void				(*pos			)(mwdView *view, double *top, double *right, double *bottom, double *left);
+		void				(*renderPos		)(mwdView *view, double *top, double *right, double *bottom, double *left);
 		bool				(*activated		)(mwdView *view);
 	} get;
 
@@ -275,6 +276,7 @@ void ViewSetActivated(mwdView *view, bool activated);
 bool ViewGetConstraints(mwdView *view, double *minWidth, double *maxWidth, double *minHeight, double *maxHeight);
 void ViewSetPos(mwdView *view, double top, double right, double bottom, double left);
 void ViewGetPos(mwdView *view, double *top, double *right, double *bottom, double *left);
+void ViewGetRenderPos(mwdView *view, double *top, double *right, double *bottom, double *left);
 void ViewGetSize(mwdView *view, double *width, double *height);
 
 void ViewForEachSurface(mwdView *view, wlr_surface_iterator_func_t iterator, void *user_data);

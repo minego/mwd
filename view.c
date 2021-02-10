@@ -44,6 +44,16 @@ void ViewGetPos(mwdView *view, double *top, double *right, double *bottom, doubl
 	view->cb->get.pos(view, top, right, bottom, left);
 }
 
+void ViewGetRenderPos(mwdView *view, double *top, double *right, double *bottom, double *left)
+{
+	if (view && view->cb && view->cb->get.renderPos) {
+		view->cb->get.renderPos(view, top, right, bottom, left);
+		return;
+	}
+
+	ViewGetPos(view, top, right, bottom, left);
+}
+
 void ViewGetSize(mwdView *view, double *width, double *height)
 {
 	double		top, right, bottom, left;
