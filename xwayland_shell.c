@@ -24,7 +24,7 @@ static void XWaylandDestroyView(mwdView *view)
 	}
 
 	wl_list_remove(&view->link.drawOrder);
-	/* Note; this is not in the userOrder list */
+	wl_list_remove(&view->link.userOrder);
 
 	view->type = MWD_UNKNOWN;
 	free(view);
@@ -221,6 +221,12 @@ static void XWaylandNewSurface(struct wl_listener *listener, void *data)
 	/* Add it to the list of views */
 	wl_list_insert(&server->views.drawOrder, &view->link.drawOrder);
 	wl_list_insert(&server->views.userOrder, &view->link.userOrder);
+
+	view->top		= surface->y;
+	view->left		= surface->x;
+
+	view->right		= view->left + surface->width;
+	view->bottom	= view->top + surface->height;
 }
 
 static void XWaylandReady(struct wl_listener *listener, void *data)
